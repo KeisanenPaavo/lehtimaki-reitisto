@@ -1,0 +1,109 @@
+{
+ "meta": {
+  "fetched": "2026-10-20T20:36+03:00",
+  "address": "Valkealammentie 200, 63510 Alajärvi",
+  "geocoded": "Valkealammen hiihto- ja matkailukeskus, 200, Valkealammentie, Lehtimäki, Alajärvi, Järviseudun seutukunta, Etelä-Pohjanmaa, Manner-Suomi, 63510, Suomi / Finland",
+  "center": [
+   62.7751833,
+   23.8650966
+  ],
+  "bbox": [
+   23.80618877568984,
+   62.74823396475027,
+   23.924004424310162,
+   62.802132635249734
+  ],
+  "status": {
+   "LIPAS": "ok",
+   "OSM": "ok",
+   "laavut": "ok"
+  }
+ },
+ "lipas_dupes": [
+  [
+   509835,
+   13
+  ],
+  [
+   509835,
+   14
+  ],
+  [
+   509835,
+   16
+  ]
+ ],
+ "lipas_wfs_segments": 45,
+ "lipas_sites": 7,
+ "osm_elements": 202,
+ "osm_relations": 0,
+ "lipas": {
+  "4402 Hiihtolatu": [
+   27,
+   13794.0,
+   [
+    "Valkealammen valaisemattomat ladut",
+    "Valkealammen valaistu latu"
+   ]
+  ],
+  "4401 Kuntorata": [
+   11,
+   5313.0,
+   [
+    "Valkealammen valaistu kuntorata"
+   ]
+  ],
+  "4422 Moottorikelkkaura": [
+   2,
+   14932.0,
+   [
+    "Valkealammen moottorikelkkaura",
+    "Valkealampi-Kirkonkylä moottorikelkkaura"
+   ]
+  ]
+ },
+ "osm": {
+  "ajoura (track)": [
+   116,
+   51241.0
+  ],
+  "polku (footway)": [
+   5,
+   352.0
+  ],
+  "polku (path)": [
+   70,
+   23284.0
+  ],
+  "polku (cycleway)": [
+   1,
+   132.0
+  ],
+  "latu": [
+   10,
+   4493.0
+  ]
+ },
+ "compare": {
+  "lipas_latu_near_osm_latu": [
+   5441.837931854192,
+   8350.406622081384
+  ],
+  "lipas_latu_near_any_osm": [
+   13067.285979010334,
+   724.9585749252442
+  ],
+  "osm_latu_near_lipas_latu": [
+   4096.358329539161,
+   396.70724107753006
+  ],
+  "lipas_unlit_near_osm_latu": [
+   2513.0708146550774,
+   5967.944523074933
+  ],
+  "lipas_lit_near_osm_latu": [
+   2928.7671171991205,
+   2382.4620990064545
+  ]
+ }
+}

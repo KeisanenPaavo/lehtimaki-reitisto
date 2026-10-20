@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valkealammen reittikartta</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root { --bg:#fff; --fg:#1d232a; --muted:#5b6670; --border:#d5dbe0; }
+  html, body { height:100%; margin:0; background:var(--bg); color:var(--fg);
+    font:14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #map { position:absolute; inset:0; }
+  .legend { background:var(--bg); padding:8px 10px; border-radius:6px; box-shadow:0 1px 4px rgba(0,0,0,.3);
+    max-width:240px; }
+  .legend h2 { font-size:13px; margin:0 0 4px; display:flex; justify-content:space-between; gap:8px; cursor:pointer; }
+  .legend .rows { margin-top:4px; }
+  .legend.collapsed .rows { display:none; }
+  .legend .row { display:flex; align-items:center; gap:8px; margin:3px 0; font-size:12px; }
+  .legend svg { flex:none; }
+  .legend .grp { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; margin-top:6px; }
+  .legend .meta { font-size:11px; color:var(--muted); margin-top:6px; border-top:1px solid var(--border); padding-top:4px; }
+  .leaflet-popup-content { font-size:13px; margin:10px 12px; }
+  .leaflet-popup-content table { border-collapse:collapse; }
+  .leaflet-popup-content td { padding:1px 6px 1px 0; vertical-align:top; }
+  .leaflet-popup-content td:first-child { color:var(--muted); white-space:nowrap; }
+  @media (max-width:600px) { .legend { max-width:190px; } .leaflet-control-layers { font-size:12px; } }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+const LIPAS = /*LIPAS*/null;
+const OSM = /*OSM*/null;
+const SHELTERS = /*SHELTERS*/null;
+const META = /*META*/null;
+
+const map = L.map('map', { zoomControl: true });
+const [W, S, E, N] = META.bbox;
+map.fitBounds([[S, W], [N, E]]);
+
+const osmBase = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> -tekijät (ODbL)'
+}).addTo(map);
+const OSM_ATTR = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> -tekijät (ODbL)';
+const baseLayers = {
+  'OpenStreetMap': osmBase,
+  'OpenTopoMap (maasto)': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    subdomains: 'abc', maxNativeZoom: 17, maxZoom: 19,
+    attribution: OSM_ATTR + ', SRTM | © <a href="https://opentopomap.org">OpenTopoMap</a> (CC BY-SA)' }),
+  'Esri-ilmakuva': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxNativeZoom: 18, maxZoom: 19,
+    attribution: 'Ilmakuva © <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics' }),
+  'CyclOSM': L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
+    subdomains: 'abc', maxZoom: 19,
+    attribution: OSM_ATTR + ' | <a href="https://www.cyclosm.org">CyclOSM</a>' }),
+};
+// MML:n maastokartta (WMTS) vaatii API-avaimen; avainta ei tallenneta tiedostoon.
+// Avaimen voi antaa URL-parametrina: index.html?mmlkey=XXXX (vain omassa selaimessa).
+const mmlKey = new URLSearchParams(location.search).get('mmlkey');
+if (mmlKey) {
+  baseLayers['MML maastokartta'] = L.tileLayer(
+    'https://avoin-karttakuva.maanmittauslaitos.fi/avoin/wmts/1.0.0/maastokartta/default/WGS84_Pseudo-Mercator/{z}/{y}/{x}.png?api-key=' + encodeURIComponent(mmlKey),
+    { maxZoom: 18, attribution: '© <a href="https://www.maanmittauslaitos.fi/">Maanmittauslaitos</a> (CC BY 4.0)' });
+}
+
+// Piirtojärjestys: OSM pienet < LIPAS ladut < LIPAS muut < OSM ladut (katkoviiva päällä vertailua varten)
+[['osmMinor', 410], ['lipasLatu', 420], ['lipasOther', 430], ['osmLatu', 440]].forEach(([n, z]) => {
+  map.createPane(n).style.zIndex = z;
+});
+
+const LIPAS_STYLE = {
+  4402: { color: '#1f5fbf', weight: 7, opacity: .85, pane: 'lipasLatu' },
+  4401: { color: '#d62728', weight: 3.5, pane: 'lipasOther' },
+  4422: { color: '#a50f15', weight: 3, dashArray: '2 6', pane: 'lipasOther' },
+  4412: { color: '#f03b20', weight: 3, dashArray: '10 4 2 4', pane: 'lipasOther' },
+};
+const LIPAS_DEFAULT = { color: '#e31a1c', weight: 3, pane: 'lipasOther' };
+const OSM_STYLE = {
+  latu:   { color: '#5ec8f2', weight: 4, dashArray: '8 6', pane: 'osmLatu', label: 'OSM-ladut (piste:type=nordic)' },
+  polku:  { color: '#8b5a2b', weight: 1.6, pane: 'osmMinor', label: 'OSM-polut (path/footway/cycleway)' },
+  ajoura: { color: '#808080', weight: 2.2, pane: 'osmMinor', label: 'OSM-ajourat (track)' },
+  reittirelaatio: { color: '#7b3fa0', weight: 3, pane: 'osmMinor', label: 'OSM-reittirelaatiot' },
+  rinne:  { color: '#333', weight: 3, pane: 'osmMinor', label: 'OSM-rinteet' },
+};
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const km = m => (m / 1000).toLocaleString('fi-FI', { maximumFractionDigits: 2 }) + ' km';
+const row = (k, v) => v === undefined || v === null || v === '' ? '' : `<tr><td>${k}</td><td>${v}</td></tr>`;
+
+function lipasPopup(p) {
+  const len = p.route_length_km != null
+    ? `${p.route_length_km.toLocaleString('fi-FI')} km (LIPAS)`
+    : km(p.length_m_in_bbox) + ' (laskettu)';
+  return '<table>' + row('Lähde', 'LIPAS') + row('Nimi', esc(p.name)) +
+    row('Tyyppi', `${p.type_code} ${esc(p.type_name)}`) + row('Reitin pituus', len) +
+    row('Tämä osa', km(p.length_m_in_bbox) + ' (laskettu, rajauksen sisällä)') +
+    row('Valaistu', p.lit_route_length_km ? `${p.lit_route_length_km.toLocaleString('fi-FI')} km` : 'ei tietoa') +
+    row('Ylläpitäjä', esc(p.maintainer)) +
+    row('LIPAS-id', `<a href="https://www.lipas.fi/liikuntapaikat/${p.lipas_id}" target="_blank" rel="noopener">${p.lipas_id}</a>`) + '</table>';
+}
+function osmPopup(p) {
+  const typ = p.piste_type ? `piste:type=${esc(p.piste_type)}` + (p.highway ? `, highway=${esc(p.highway)}` : '')
+    : p.highway ? `highway=${esc(p.highway)}` : `route=${esc(p.route)}`;
+  const t = p.tags || {};
+  return '<table>' + row('Lähde', 'OpenStreetMap') + row('Nimi', esc(p.name) || '<i>nimetön</i>') +
+    row('Tyyppi', typ) + row('Pituus', km(p.length_m_in_bbox) + ' (laskettu)') +
+    row('Valaistu', esc(p.lit)) + row('Pinta', esc(t.surface)) + row('Latu', esc(t['piste:grooming'])) +
+    row('OSM', `<a href="https://www.openstreetmap.org/${p.osm_id}" target="_blank" rel="noopener">${p.osm_id}</a>`) + '</table>';
+}
+
+const overlays = {};
+const legendRows = { LIPAS: [], OSM: [], SH: [] };
+const swatch = s => `<svg width="34" height="10"><line x1="1" y1="5" x2="33" y2="5" stroke="${s.color}" stroke-width="${Math.min(s.weight, 7)}" stroke-dasharray="${s.dashArray || ''}" stroke-opacity="${s.opacity || 1}"/></svg>`;
+
+// LIPAS: yksi taso per tyyppikoodi (nimet datan omista attribuuteista)
+const lipasTypes = {};
+LIPAS.features.forEach(f => { (lipasTypes[f.properties.type_code] ||= { name: f.properties.type_name, feats: [] }).feats.push(f); });
+Object.keys(lipasTypes).sort().forEach(code => {
+  const { name, feats } = lipasTypes[code];
+  const st = LIPAS_STYLE[code] || LIPAS_DEFAULT;
+  const lyr = L.geoJSON({ type: 'FeatureCollection', features: feats }, {
+    style: st, pane: st.pane,
+    onEachFeature: (f, l) => l.bindPopup(lipasPopup(f.properties)),
+  });
+  const label = `LIPAS ${code} ${name}`;
+  overlays[label] = lyr; lyr.addTo(map);
+  legendRows.LIPAS.push(`<div class="row">${swatch(st)}<span>${esc(code)} ${esc(name)} (${feats.length})</span></div>`);
+});
+
+// OSM: tasot kategorioittain
+['latu', 'polku', 'ajoura', 'reittirelaatio', 'rinne'].forEach(cat => {
+  const feats = OSM.features.filter(f => f.properties.category === cat);
+  if (!feats.length) return;
+  const st = OSM_STYLE[cat];
+  const lyr = L.geoJSON({ type: 'FeatureCollection', features: feats }, {
+    style: st, pane: st.pane,
+    onEachFeature: (f, l) => l.bindPopup(osmPopup(f.properties)),
+  });
+  overlays[st.label] = lyr; lyr.addTo(map);
+  legendRows.OSM.push(`<div class="row">${swatch(st)}<span>${esc(st.label.replace('OSM-', ''))} (${feats.length})</span></div>`);
+});
+
+// Laavut ja kodat: muoto = tyyppi, väri = lähde
+const SH_COLOR = { LIPAS: '#c0392b', OSM: '#e67e22' };
+const shShape = (kind, color, size = 22) => {
+  const s = size, st = `fill="${color}" stroke="#fff" stroke-width="2"`;
+  const body = kind === 'laavu' ? `<polygon points="${s/2},2 ${s-2},${s-3} 2,${s-3}" ${st}/>`
+    : kind === 'kota' ? `<circle cx="${s/2}" cy="${s/2}" r="${s/2-2}" ${st}/><polygon points="${s/2},5 ${s-7},${s-7} 7,${s-7}" fill="#fff"/>`
+    : `<rect x="3" y="3" width="${s-6}" height="${s-6}" ${st}/>`;
+  return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" style="filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))">${body}</svg>`;
+};
+function shelterPopup(p) {
+  const t = p.tags || {};
+  return '<table>' + row('Lähde', p.source === 'LIPAS' ? 'LIPAS' : 'OpenStreetMap') +
+    row('Nimi', esc(p.name) || '<i>nimetön</i>') + row('Tyyppi', esc(p.kind) + (p.type_name ? ` (${p.type_code} ${esc(p.type_name)})` : '')) +
+    row('shelter_type', esc(p.shelter_type)) + row('Tulipaikka', esc(p.fireplace)) +
+    row('WC', p.toilet === true ? 'kyllä' : '') + row('Vapaa käyttö', p.free_use === true ? 'kyllä' : '') +
+    row('Lisätieto', esc(p.comment)) + row('Ylläpitäjä', esc(p.maintainer)) +
+    row(p.source === 'LIPAS' ? 'LIPAS-id' : 'OSM', p.source === 'LIPAS'
+      ? `<a href="https://www.lipas.fi/liikuntapaikat/${p.lipas_id}" target="_blank" rel="noopener">${p.lipas_id}</a>`
+      : `<a href="https://www.openstreetmap.org/${p.osm_id}" target="_blank" rel="noopener">${p.osm_id}</a>`) + '</table>';
+}
+['LIPAS', 'OSM'].forEach(src => {
+  const feats = SHELTERS.features.filter(f => f.properties.source === src);
+  if (!feats.length) return;
+  const lyr = L.geoJSON({ type: 'FeatureCollection', features: feats }, {
+    pointToLayer: (f, ll) => L.marker(ll, {
+      icon: L.divIcon({ className: '', html: shShape(f.properties.kind, SH_COLOR[src]), iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -10] }),
+      title: f.properties.name || f.properties.kind,
+      zIndexOffset: src === 'LIPAS' ? 1000 : 0,
+    }),
+    onEachFeature: (f, l) => l.bindPopup(shelterPopup(f.properties)),
+  });
+  const label = `${src === 'LIPAS' ? 'LIPAS' : 'OSM'} laavut ja kodat`;
+  overlays[label] = lyr; lyr.addTo(map);
+  legendRows.SH.push(`<div class="row">${shShape('laavu', SH_COLOR[src], 14)}${shShape('kota', SH_COLOR[src], 14)}<span>${src} (${feats.length})</span></div>`);
+});
+
+// MML-tasolle (maastotietokannan polut) on paikka, jos data/mml.geojson haetaan myöhemmin.
+
+const bboxRect = L.rectangle([[S, W], [N, E]], { color: '#555', weight: 1, dashArray: '4 4', fill: false, interactive: false });
+overlays['Hakurajaus (±3 km)'] = bboxRect; bboxRect.addTo(map);
+L.circleMarker(META.center, { radius: 5, color: '#000', weight: 2, fillColor: '#ffd400', fillOpacity: 1 })
+  .bindPopup(`<b>Keskipiste</b><br>${esc(META.address)}`).addTo(map);
+
+L.control.layers(baseLayers, overlays, { collapsed: window.innerWidth < 700 }).addTo(map);
+L.control.scale({ imperial: false }).addTo(map);
+
+const legend = L.control({ position: 'bottomleft' });
+legend.onAdd = () => {
+  const d = L.DomUtil.create('div', 'legend' + (window.innerWidth < 600 ? ' collapsed' : ''));
+  d.innerHTML = `<h2><span>Valkealammen reitit</span><span aria-hidden="true">☰</span></h2><div class="rows">
+    <div class="grp">LIPAS (hoidetut reitit)</div>${legendRows.LIPAS.join('') || '<div class="row">ei kohteita</div>'}
+    <div class="grp">OpenStreetMap</div>${legendRows.OSM.join('') || '<div class="row">ei kohteita</div>'}
+    <div class="grp">Laavut ▲ ja kodat ●</div>${legendRows.SH.join('') || '<div class="row">ei kohteita</div>'}
+    <div class="meta">Haettu ${esc(META.fetched.slice(0, 10))}. Lähteet: LIPAS (JYU, CC BY 4.0), © OpenStreetMap -tekijät (ODbL)${mmlKey ? ', © Maanmittauslaitos (CC BY 4.0)' : ''}.</div></div>`;
+  d.querySelector('h2').onclick = () => d.classList.toggle('collapsed');
+  L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
+  return d;
+};
+legend.addTo(map);
+map.attributionControl.addAttribution('Reitit: <a href="https://www.lipas.fi/">LIPAS</a> (JYU, CC BY 4.0)');
+</script>
+</body>
+</html>

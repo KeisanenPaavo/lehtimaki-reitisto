@@ -1,0 +1,209 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     23.8435232,
+     62.7618577
+    ]
+   },
+   "properties": {
+    "source": "LIPAS",
+    "lipas_id": 605374,
+    "name": "Jäkälämäen kota",
+    "kind": "kota",
+    "type_code": 301,
+    "type_name": "Laavu, kota tai kammi",
+    "maintainer": "Rekisteröity yhdistys",
+    "comment": "Opastus 2,3 km kodalle Valkealammen kautta (talvella myös ladun varrella).",
+    "toilet": true,
+    "free_use": true
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     23.8669895,
+     62.7763223
+    ]
+   },
+   "properties": {
+    "source": "OSM",
+    "osm_id": "node/2026462596",
+    "name": null,
+    "kind": "laavu",
+    "shelter_type": "lean_to",
+    "fireplace": null,
+    "tags": {
+     "amenity": "shelter",
+     "shelter_type": "lean_to",
+     "snowmobile": "yes"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     23.8635994,
+     62.7757371
+    ]
+   },
+   "properties": {
+    "source": "OSM",
+    "osm_id": "node/5357269982",
+    "name": null,
+    "kind": "laavu",
+    "shelter_type": "lean_to",
+    "fireplace": null,
+    "tags": {
+     "amenity": "shelter",
+     "shelter_type": "lean_to",
+     "snowmobile": "yes"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     23.8668166,
+     62.7767281
+    ]
+   },
+   "properties": {
+    "source": "OSM",
+    "osm_id": "node/8401787170",
+    "name": null,
+    "kind": "katos (tyyppi puuttuu)",
+    "shelter_type": null,
+    "fireplace": null,
+    "tags": {
+     "amenity": "shelter",
+     "snowmobile": "yes"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     23.8625686,
+     62.7751474
+    ]
+   },
+   "properties": {
+    "source": "OSM",
+    "osm_id": "node/8401787171",
+    "name": null,
+    "kind": "laavu",
+    "shelter_type": "lean_to",
+    "fireplace": null,
+    "tags": {
+     "amenity": "shelter",
+     "shelter_type": "lean_to",
+     "snowmobile": "yes"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     23.843495,
+     62.7618473
+    ]
+   },
+   "properties": {
+    "source": "OSM",
+    "osm_id": "node/12105990404",
+    "name": "Jäkälämäen kota",
+    "kind": "kota",
+    "shelter_type": null,
+    "fireplace": null,
+    "tags": {
+     "amenity": "shelter",
+     "name": "Jäkälämäen kota"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     23.8431629,
+     62.7618858
+    ]
+   },
+   "properties": {
+    "source": "OSM",
+    "osm_id": "node/12105990482",
+    "name": "Jäkälämäen laavu",
+    "kind": "laavu",
+    "shelter_type": "lean_to",
+    "fireplace": null,
+    "tags": {
+     "amenity": "shelter",
+     "name": "Jäkälämäen laavu",
+     "shelter_type": "lean_to"
+    }
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     23.863061,
+     62.7634996
+    ]
+   },
+   "properties": {
+    "source": "OSM",
+    "osm_id": "way/190921915",
+    "name": "Kota",
+    "kind": "kota",
+    "shelter_type": "lean_to",
+    "fireplace": "yes",
+    "tags": {
+     "amenity": "shelter",
+     "building": "hut",
+     "fireplace": "yes",
+     "name": "Kota",
+     "shelter_type": "lean_to"
+    }
+   }
+  }
+ ],
+ "metadata": {
+  "fetched": "2026-10-20T20:36+03:00",
+  "address": "Valkealammentie 200, 63510 Alajärvi",
+  "geocoded": "Valkealammen hiihto- ja matkailukeskus, 200, Valkealammentie, Lehtimäki, Alajärvi, Järviseudun seutukunta, Etelä-Pohjanmaa, Manner-Suomi, 63510, Suomi / Finland",
+  "center": [
+   62.7751833,
+   23.8650966
+  ],
+  "bbox": [
+   23.80618877568984,
+   62.74823396475027,
+   23.924004424310162,
+   62.802132635249734
+  ],
+  "status": {
+   "LIPAS": "ok",
+   "OSM": "ok",
+   "laavut": "ok"
+  },
+  "source": "LIPAS WFS lipas:lipas_301_laavu_kota_kammi + api.lipas.fi/v2; Overpass amenity=shelter, tourism=wilderness_hut"
+ }
+}
