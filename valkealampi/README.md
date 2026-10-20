@@ -5,7 +5,10 @@ Kartta Valkealammen ulkoilualueen (Lehtimäki, Alajärvi) laduista, poluista ja 
 - **Kartta:** `index.html`. Yksi tiedosto, jossa data on upotettuna. Se aukeaa suoraan selaimessa ilman palvelinta (Leaflet ja taustakartat tulevat verkosta).
 - **Taustakartat** (tasonvalitsin oikeassa yläkulmassa): OpenStreetMap (oletus), OpenTopoMap (maasto ja korkeuskäyrät), Esri-ilmakuva ja CyclOSM (polut ja pyöräilyreitit korostettuina). Kaikki toimivat ilman avainta. MML:n maastokartta tulee valikkoon vain, jos osoitteeseen lisätään `?mmlkey=OMA_AVAIN`. Kapsin MML-karttatiilet (tiles.kartat.kapsi.fi) testattiin myös, mutta ne eivät vastanneet 2026-10-20.
 - **Data:** `data/lipas.geojson`, `data/osm.geojson`, `data/laavut.geojson` (laavut ja kodat, molemmat lähteet) ja `data/_stats.json` (tilastot ja vertailu).
-- **Uudelleenhaku:** `python3 build.py`. Skripti käyttää vain Pythonin standardikirjastoa ja `curl`ia. Se hakee datan ja rakentaa `index.html`:n pohjasta `template.html`.
+- **Kunto, kommentit ja kuvat:** reitin tai taukopaikan popupissa on painike, joka avaa kohdekortin. Kortissa voi ilmoittaa kunnon, kommentoida ja lähettää kuvan ilman kirjautumista. Tiedot tallentuvat Supabaseen (ks. [../supabase/README.md](../supabase/README.md)). Viimeisin kuntoilmoitus värittää reitin: ladulla ilmoitus on voimassa 48 h, muilla reiteillä 7 pv.
+- **Kohdelinkit** (esim. QR-koodeihin): `index.html#jakalamaen-kota`, `#valaistu-latu` jne. Tunnisteet ovat taulussa `targets`.
+- **Pelkkä uudelleenrakennus** pohjan muokkauksen jälkeen ilman verkkohakuja: `python3 build.py --render`.
+- **Uudelleenhaku:** `python3 build.py`. Jos jokin lähde ei vastaa, käytetään edellistä tallennettua tiedostoa. Skripti käyttää vain Pythonin standardikirjastoa ja `curl`ia. Se hakee datan ja rakentaa `index.html`:n pohjasta `template.html`.
 
 ## Haku
 

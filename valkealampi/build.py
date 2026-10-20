@@ -281,6 +281,16 @@ def shelters(bbox):
     return {"type": "FeatureCollection", "features": feats}
 
 
+def previous(name):
+    """Haun epäonnistuessa käytetään edellistä tallennettua tiedostoa, ettei data tyhjene."""
+    p = os.path.join(DATA, name)
+    if os.path.exists(p):
+        d = json.load(open(p, encoding="utf-8"))
+        print(f"  -> käytetään edellistä tiedostoa {name} ({len(d['features'])} kohdetta)")
+        return d
+    return {"type": "FeatureCollection", "features": []}
+
+
 def main():
     os.makedirs(DATA, exist_ok=True)
     fetched = datetime.now(timezone.utc).astimezone().isoformat(timespec="minutes")
@@ -289,12 +299,12 @@ def main():
     try:
         lip, lip_wfs_n, lip_sites = lipas(bbox); status["LIPAS"] = "ok"
     except Exception as e:
-        print("LIPAS epäonnistui:", e); lip, lip_wfs_n, lip_sites = {"type": "FeatureCollection", "features": []}, 0, 0
+        print("LIPAS epäonnistui:", e); lip, lip_wfs_n, lip_sites = previous("lipas.geojson"), 0, 0
         status["LIPAS"] = f"virhe: {e}"
     try:
         om, osm_n, osm_rel = osm(bbox); status["OSM"] = "ok"
     except Exception as e:
-        print("OSM epäonnistui:", e); om, osm_n, osm_rel = {"type": "FeatureCollection", "features": []}, 0, 0
+        print("OSM epäonnistui:", e); om, osm_n, osm_rel = previous("osm.geojson"), 0, 0
         status["OSM"] = f"virhe: {e}"
 
     meta = {"fetched": fetched, "address": ADDRESS, "geocoded": disp, "center": center,
@@ -306,7 +316,7 @@ def main():
     try:
         sh = shelters(bbox); status["laavut"] = "ok"
     except Exception as e:
-        print("Laavuhaku epäonnistui:", e); sh = {"type": "FeatureCollection", "features": []}
+        print("Laavuhaku epäonnistui:", e); sh = previous("laavut.geojson")
         status["laavut"] = f"virhe: {e}"
     sh["metadata"] = dict(meta, source="LIPAS WFS lipas:lipas_301_laavu_kota_kammi + api.lipas.fi/v2; Overpass amenity=shelter, tourism=wilderness_hut")
     json.dump(sh, open(os.path.join(DATA, "laavut.geojson"), "w"), ensure_ascii=False, indent=1)
@@ -349,5 +359,19 @@ def main():
     print(json.dumps(st, ensure_ascii=False, indent=1, default=list))
 
 
+def render_only():
+    """Rakentaa index.html:n tallennetusta datasta ilman verkkohakuja (pohjan muokkauksen jälkeen)."""
+    load = lambda n: json.load(open(os.path.join(DATA, n), encoding="utf-8"))
+    lip, om, sh = load("lipas.geojson"), load("osm.geojson"), load("laavut.geojson")
+    meta = {k: lip["metadata"][k] for k in ("fetched", "address", "geocoded", "center", "bbox", "status")}
+    tpl = open(os.path.join(HERE, "template.html"), encoding="utf-8").read()
+    dump = lambda x: json.dumps(x, ensure_ascii=False, separators=(",", ":"))
+    html = (tpl.replace("/*LIPAS*/null", dump(lip)).replace("/*OSM*/null", dump(om))
+               .replace("/*SHELTERS*/null", dump(sh)).replace("/*META*/null", json.dumps(meta, ensure_ascii=False)))
+    open(os.path.join(HERE, "index.html"), "w", encoding="utf-8").write(html)
+    print("index.html rakennettu tallennetusta datasta")
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+    render_only() if "--render" in sys.argv else main()

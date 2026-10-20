@@ -25,10 +25,110 @@
   .leaflet-popup-content td { padding:1px 6px 1px 0; vertical-align:top; }
   .leaflet-popup-content td:first-child { color:var(--muted); white-space:nowrap; }
   @media (max-width:600px) { .legend { max-width:190px; } .leaflet-control-layers { font-size:12px; } }
+
+  /* Kohdekortti: oikea paneeli työpöydällä, alapaneeli puhelimessa */
+  :root { --panel:#fbfcfd; --chip:#eef2f5; --chip-on:#1f5fbf; --ok:#2e8b3e; --mid:#d9a400; --bad:#d4561b; --closed:#5b6670; --err:#b3261e; }
+  .open-card { margin-top:8px; width:100%; padding:7px 10px; border:0; border-radius:6px; background:var(--chip-on); color:#fff;
+    font:600 13px system-ui, sans-serif; cursor:pointer; }
+  .open-card:focus-visible, .panel button:focus-visible, .panel input:focus-visible, .panel textarea:focus-visible { outline:2px solid var(--chip-on); outline-offset:2px; }
+  .cond-line { margin-top:6px; font-size:12px; display:flex; align-items:center; gap:6px; }
+  .dot { width:10px; height:10px; border-radius:50%; flex:none; display:inline-block; }
+  .panel { position:fixed; z-index:1000; background:var(--panel); color:var(--fg); box-shadow:0 0 18px rgba(0,0,0,.25);
+    display:flex; flex-direction:column; top:0; right:0; bottom:0; width:min(400px, 100%); }
+  .panel header { display:flex; align-items:flex-start; gap:10px; padding:14px 16px 10px; border-bottom:1px solid var(--border); }
+  .panel header h2 { font-size:17px; margin:0; text-wrap:balance; flex:1; }
+  .panel header .kind { font-size:12px; color:var(--muted); margin-top:2px; }
+  .panel .close { border:0; background:var(--chip); border-radius:6px; width:32px; height:32px; font-size:18px; cursor:pointer; flex:none; }
+  .panel .body { overflow-y:auto; padding:12px 16px 24px; display:flex; flex-direction:column; gap:16px; }
+  .panel h3 { font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 6px; }
+  .status { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; background:var(--chip); }
+  .status .dot { width:14px; height:14px; }
+  .status b { font-size:15px; }
+  .status small { color:var(--muted); display:block; }
+  .panel details { border:1px solid var(--border); border-radius:8px; background:var(--bg); }
+  .panel summary { padding:10px 12px; cursor:pointer; font-weight:600; }
+  .panel form { display:flex; flex-direction:column; gap:8px; padding:0 12px 12px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chips label { position:relative; }
+  .chips input { position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
+  .chips span { display:inline-block; padding:5px 10px; border-radius:999px; background:var(--chip); font-size:13px; }
+  .chips input:checked + span { background:var(--chip-on); color:#fff; }
+  .chips input:focus-visible + span { outline:2px solid var(--chip-on); outline-offset:2px; }
+  .panel input[type=text], .panel textarea { font:14px system-ui, sans-serif; padding:7px 9px; border:1px solid var(--border); border-radius:6px; width:100%; box-sizing:border-box; }
+  .panel textarea { min-height:64px; resize:vertical; }
+  .panel .submit { align-self:flex-start; border:0; border-radius:6px; background:var(--chip-on); color:#fff; padding:8px 14px; font-weight:600; cursor:pointer; }
+  .panel .submit[disabled] { opacity:.6; cursor:progress; }
+  .msg { font-size:13px; }
+  .msg.err { color:var(--err); }
+  .hp { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
+  .feed { display:flex; flex-direction:column; gap:10px; margin:0; padding:0; list-style:none; }
+  .feed li { border-left:3px solid var(--border); padding-left:10px; }
+  .feed .when { font-size:12px; color:var(--muted); }
+  .feed .tags { font-size:12px; color:var(--muted); }
+  .feed p { margin:2px 0 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .gallery { display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:6px; }
+  .gallery figure { margin:0; }
+  .gallery img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:6px; background:var(--chip); display:block; }
+  .gallery figcaption { font-size:11px; color:var(--muted); margin-top:2px; overflow-wrap:anywhere; }
+  .empty { color:var(--muted); font-size:13px; margin:0; }
+  .note { font-size:12px; color:var(--muted); margin:0; }
+  @media (max-width:700px) {
+    .panel { top:auto; left:0; width:100%; max-height:78%; border-radius:14px 14px 0 0; }
+  }
+  @media (prefers-reduced-motion: no-preference) { .panel { transition:transform .2s ease; } }
 </style>
 </head>
 <body>
 <div id="map"></div>
+<aside class="panel" id="panel" hidden aria-labelledby="p-title">
+  <header>
+    <div style="flex:1;min-width:0"><h2 id="p-title"></h2><div class="kind" id="p-kind"></div></div>
+    <button class="close" id="p-close" type="button" aria-label="Sulje kortti">×</button>
+  </header>
+  <div class="body">
+    <section><h3>Kunto nyt</h3><div class="status" id="p-status"></div></section>
+
+    <details id="d-report">
+      <summary>Ilmoita kunto</summary>
+      <form id="f-report">
+        <div class="chips" id="r-cond" role="radiogroup" aria-label="Kunto"></div>
+        <div class="chips" id="r-tags" aria-label="Tarkenteet"></div>
+        <textarea id="r-note" maxlength="500" placeholder="Lisätieto (vapaaehtoinen)"></textarea>
+        <div class="hp" aria-hidden="true"><input id="r-hp" type="text" tabindex="-1" autocomplete="off"></div>
+        <button class="submit" type="submit">Lähetä ilmoitus</button>
+        <div class="msg" id="r-msg" role="status"></div>
+      </form>
+    </details>
+
+    <details id="d-comment">
+      <summary>Kirjoita kommentti</summary>
+      <form id="f-comment">
+        <input id="c-name" type="text" maxlength="40" placeholder="Nimimerkki (vapaaehtoinen)" autocomplete="nickname">
+        <textarea id="c-body" maxlength="1000" placeholder="Kommentti" required></textarea>
+        <div class="hp" aria-hidden="true"><input id="c-hp" type="text" tabindex="-1" autocomplete="off"></div>
+        <button class="submit" type="submit">Lähetä kommentti</button>
+        <div class="msg" id="c-msg" role="status"></div>
+      </form>
+    </details>
+
+    <details id="d-photo">
+      <summary>Lisää kuva</summary>
+      <form id="f-photo">
+        <input id="ph-file" type="file" accept="image/*" required>
+        <input id="ph-caption" type="text" maxlength="200" placeholder="Kuvateksti (vapaaehtoinen)">
+        <input id="ph-name" type="text" maxlength="40" placeholder="Nimimerkki (vapaaehtoinen)" autocomplete="nickname">
+        <div class="hp" aria-hidden="true"><input id="ph-hp" type="text" tabindex="-1" autocomplete="off"></div>
+        <p class="note">Kuva pienennetään ja sen sijaintitiedot poistetaan ennen lähetystä. Kuva näkyy, kun ylläpito on hyväksynyt sen.</p>
+        <button class="submit" type="submit">Lähetä kuva</button>
+        <div class="msg" id="ph-msg" role="status"></div>
+      </form>
+    </details>
+
+    <section><h3>Kuvat</h3><div class="gallery" id="p-photos"></div></section>
+    <section><h3>Ilmoitukset</h3><ul class="feed" id="p-reports"></ul></section>
+    <section><h3>Kommentit</h3><ul class="feed" id="p-comments"></ul></section>
+  </div>
+</aside>
 <script>
 const LIPAS = /*LIPAS*/null;
 const OSM = /*OSM*/null;
@@ -65,7 +165,7 @@ if (mmlKey) {
 }
 
 // Piirtojärjestys: OSM pienet < LIPAS ladut < LIPAS muut < OSM ladut (katkoviiva päällä vertailua varten)
-[['osmMinor', 410], ['lipasLatu', 420], ['lipasOther', 430], ['osmLatu', 440]].forEach(([n, z]) => {
+[['halo', 405], ['osmMinor', 410], ['lipasLatu', 420], ['lipasOther', 430], ['osmLatu', 440]].forEach(([n, z]) => {
   map.createPane(n).style.zIndex = z;
 });
 
@@ -121,7 +221,7 @@ Object.keys(lipasTypes).sort().forEach(code => {
   const st = LIPAS_STYLE[code] || LIPAS_DEFAULT;
   const lyr = L.geoJSON({ type: 'FeatureCollection', features: feats }, {
     style: st, pane: st.pane,
-    onEachFeature: (f, l) => l.bindPopup(lipasPopup(f.properties)),
+    onEachFeature: (f, l) => l.bindPopup(() => lipasPopup(f.properties) + communityPopup(targetForLipas(f.properties.lipas_id))),
   });
   const label = `LIPAS ${code} ${name}`;
   overlays[label] = lyr; lyr.addTo(map);
@@ -170,7 +270,7 @@ function shelterPopup(p) {
       title: f.properties.name || f.properties.kind,
       zIndexOffset: src === 'LIPAS' ? 1000 : 0,
     }),
-    onEachFeature: (f, l) => l.bindPopup(shelterPopup(f.properties)),
+    onEachFeature: (f, l) => l.bindPopup(() => shelterPopup(f.properties) + communityPopup(targetForShelter(f.properties))),
   });
   const label = `${src === 'LIPAS' ? 'LIPAS' : 'OSM'} laavut ja kodat`;
   overlays[label] = lyr; lyr.addTo(map);
@@ -184,7 +284,7 @@ overlays['Hakurajaus (±3 km)'] = bboxRect; bboxRect.addTo(map);
 L.circleMarker(META.center, { radius: 5, color: '#000', weight: 2, fillColor: '#ffd400', fillOpacity: 1 })
   .bindPopup(`<b>Keskipiste</b><br>${esc(META.address)}`).addTo(map);
 
-L.control.layers(baseLayers, overlays, { collapsed: window.innerWidth < 700 }).addTo(map);
+const layerControl = L.control.layers(baseLayers, overlays, { collapsed: window.innerWidth < 700 }).addTo(map);
 L.control.scale({ imperial: false }).addTo(map);
 
 const legend = L.control({ position: 'bottomleft' });
@@ -194,6 +294,9 @@ legend.onAdd = () => {
     <div class="grp">LIPAS (hoidetut reitit)</div>${legendRows.LIPAS.join('') || '<div class="row">ei kohteita</div>'}
     <div class="grp">OpenStreetMap</div>${legendRows.OSM.join('') || '<div class="row">ei kohteita</div>'}
     <div class="grp">Laavut ▲ ja kodat ●</div>${legendRows.SH.join('') || '<div class="row">ei kohteita</div>'}
+    <div class="grp">Kunto (kävijöiden ilmoitukset)</div><div class="row" style="flex-wrap:wrap;gap:4px 10px">
+      <span><span class="dot" style="background:#2e8b3e"></span> Hyvä</span><span><span class="dot" style="background:#d9a400"></span> Kelvollinen</span>
+      <span><span class="dot" style="background:#d4561b"></span> Huono</span><span><span class="dot" style="background:#5b6670"></span> Suljettu</span></div>
     <div class="meta">Haettu ${esc(META.fetched.slice(0, 10))}. Lähteet: LIPAS (JYU, CC BY 4.0), © OpenStreetMap -tekijät (ODbL)${mmlKey ? ', © Maanmittauslaitos (CC BY 4.0)' : ''}.</div></div>`;
   d.querySelector('h2').onclick = () => d.classList.toggle('collapsed');
   L.DomEvent.disableClickPropagation(d); L.DomEvent.disableScrollPropagation(d);
@@ -201,6 +304,306 @@ legend.onAdd = () => {
 };
 legend.addTo(map);
 map.attributionControl.addAttribution('Reitit: <a href="https://www.lipas.fi/">LIPAS</a> (JYU, CC BY 4.0)');
+
+// ================= Yhteisö: kuntoilmoitukset, kommentit ja kuvat (Supabase) =================
+// Julkinen (publishable) avain saa olla selaimessa; oikeudet rajataan tietokannan säännöillä.
+const SB_URL = 'https://jflqdwbelfqwudhlyxxh.supabase.co';
+const SB_KEY = 'sb_publishable_KdOOksTSl9fbi5wlzPdrhw_m5Om-1iI';
+
+const CONDITIONS = {
+  hyva:        { label: 'Hyvä',        color: 'var(--ok)',     hex: '#2e8b3e' },
+  kelvollinen: { label: 'Kelvollinen', color: 'var(--mid)',    hex: '#d9a400' },
+  huono:       { label: 'Huono',       color: 'var(--bad)',    hex: '#d4561b' },
+  suljettu:    { label: 'Suljettu',    color: 'var(--closed)', hex: '#5b6670' },
+};
+const TAGS = {
+  route:   { 'ajettu': 'Ajettu', 'pohja-hyva': 'Hyvä pohja', 'jainen': 'Jäinen', 'upottava': 'Upottava', 'lumeton': 'Vähän lunta',
+             'kaatunut-puu': 'Kaatunut puu', 'vesilammikko': 'Vesilammikko', 'mutainen': 'Mutainen' },
+  shelter: { 'puita-on': 'Puita on', 'puut-loppu': 'Puut loppu', 'siisti': 'Siisti', 'roskia': 'Roskia', 'vaurio': 'Vaurio' },
+};
+const TAG_LABEL = { ...TAGS.route, ...TAGS.shelter };
+
+const C = { targets: {}, byLipas: {}, byOsm: {}, reports: [], comments: [], photos: [], signed: {}, ready: false, current: null };
+
+async function api(path, { method = 'GET', body, headers = {}, raw = false } = {}) {
+  const res = await fetch(SB_URL + path, {
+    method,
+    headers: { apikey: SB_KEY, ...(body && !raw ? { 'Content-Type': 'application/json' } : {}), ...headers },
+    body: raw ? body : body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!res.ok) throw new Error(friendlyError(data, res.status));
+  return data;
+}
+function friendlyError(data, status) {
+  const m = (data && (data.message || data.error)) || '';
+  if (/Liian monta|ruuhkautunut/.test(m)) return m;
+  if (/check constraint|violates/.test(m)) return 'Tarkista lähetyksen sisältö.';
+  if (status >= 500 || !m) return 'Palvelimeen ei saatu yhteyttä. Yritä hetken päästä uudelleen.';
+  return 'Lähetys ei onnistunut. Yritä uudelleen.';
+}
+
+const targetForLipas = id => C.byLipas[id] || null;
+const targetForShelter = p => (p.source === 'LIPAS' ? C.byLipas[p.lipas_id] : C.byOsm[p.osm_id]) || null;
+
+function rel(ts) {
+  const d = (Date.now() - new Date(ts)) / 60000;
+  if (d < 1) return 'juuri nyt';
+  if (d < 60) return `${Math.round(d)} min sitten`;
+  if (d < 1440) return `${Math.round(d / 60)} h sitten`;
+  if (d < 10080) return `${Math.round(d / 1440)} pv sitten`;
+  return new Date(ts).toLocaleDateString('fi-FI');
+}
+// Kuinka kauan ilmoitus pätee: ladut 48 h, muut reitit 7 pv, taukopaikat 30 pv
+function freshHours(t) {
+  if (t.kind === 'shelter') return 720;
+  return /latu/.test(t.id) ? 48 : 168;
+}
+function latest(tid) {
+  const t = C.targets[tid];
+  const cutoff = Date.now() - freshHours(t) * 3600e3;
+  return C.reports.find(r => r.target_id === tid && r.condition && new Date(r.created_at) > cutoff) || null;
+}
+
+function communityPopup(tid) {
+  if (!tid) return '';
+  const r = C.ready ? latest(tid) : null;
+  const line = r
+    ? `<div class="cond-line"><span class="dot" style="background:${CONDITIONS[r.condition].hex}"></span>Kunto: <b>${CONDITIONS[r.condition].label}</b> · ${rel(r.created_at)}</div>`
+    : C.ready ? '<div class="cond-line">Ei tuoreita kuntoilmoituksia</div>' : '';
+  return `${line}<button class="open-card" type="button" data-target="${esc(tid)}">Kunto, kommentit ja kuvat</button>`;
+}
+map.on('popupopen', e => {
+  const b = e.popup.getElement().querySelector('.open-card');
+  if (b) b.addEventListener('click', () => { map.closePopup(); openPanel(b.dataset.target); });
+});
+
+// Reittien kuntohalo viimeisimmän ilmoituksen mukaan
+const haloLayer = L.layerGroup().addTo(map);
+layerControl.addOverlay(haloLayer, 'Kunto (käyttäjien ilmoitukset)');
+function drawHalos() {
+  haloLayer.clearLayers();
+  Object.values(C.targets).filter(t => t.kind === 'route' && t.lipas_id).forEach(t => {
+    const r = latest(t.id);
+    if (!r) return;
+    const feats = LIPAS.features.filter(f => f.properties.lipas_id === t.lipas_id);
+    L.geoJSON({ type: 'FeatureCollection', features: feats }, {
+      pane: 'halo', interactive: false,
+      style: { color: CONDITIONS[r.condition].hex, weight: 16, opacity: .35, lineCap: 'round' },
+    }).addTo(haloLayer);
+  });
+}
+
+async function loadCommunity() {
+  const since = new Date(Date.now() - 60 * 86400e3).toISOString();
+  const [targets, reports, comments, photos] = await Promise.all([
+    api('/rest/v1/targets?select=id,kind,name,lipas_id,osm_ids,lat,lon'),
+    api(`/rest/v1/reports?select=id,target_id,condition,tags,note,created_at&created_at=gte.${since}&order=created_at.desc&limit=500`),
+    api('/rest/v1/comments?select=id,target_id,author_name,body,created_at&order=created_at.desc&limit=300'),
+    api('/rest/v1/photos?select=id,target_id,storage_path,caption,author_name,created_at&order=created_at.desc&limit=200'),
+  ]);
+  C.targets = {}; C.byLipas = {}; C.byOsm = {};
+  targets.forEach(t => {
+    C.targets[t.id] = t;
+    if (t.lipas_id) C.byLipas[t.lipas_id] = t.id;
+    (t.osm_ids || []).forEach(o => { C.byOsm[o] = t.id; });
+  });
+  C.reports = reports; C.comments = comments; C.photos = photos;
+  await signPhotos(photos.map(p => p.storage_path));
+  C.ready = true;
+  drawHalos();
+}
+async function signPhotos(paths) {
+  const need = paths.filter(p => !C.signed[p]);
+  if (!need.length) return;
+  try {
+    const res = await api('/storage/v1/object/sign/photos', { method: 'POST', body: { expiresIn: 3600, paths: need } });
+    res.forEach(r => { if (r.signedURL) C.signed[r.path] = SB_URL + '/storage/v1' + r.signedURL; });
+  } catch { /* kuvat jäävät näyttämättä */ }
+}
+
+// ---------- kortti ----------
+const $ = id => document.getElementById(id);
+const panel = $('panel');
+$('p-close').onclick = closePanel;
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !panel.hidden) closePanel(); });
+L.DomEvent.disableClickPropagation(panel); L.DomEvent.disableScrollPropagation(panel);
+
+function openPanel(tid) {
+  const t = C.targets[tid];
+  if (!t) return;
+  C.current = tid;
+  $('p-title').textContent = t.name;
+  $('p-kind').textContent = t.kind === 'route' ? 'Reitti' : 'Taukopaikka';
+  // pikavalinnat kohteen tyypin mukaan
+  $('r-cond').innerHTML = Object.entries(CONDITIONS).map(([k, c]) =>
+    `<label><input type="radio" name="cond" value="${k}"><span>${c.label}</span></label>`).join('');
+  $('r-tags').innerHTML = Object.entries(TAGS[t.kind]).map(([k, l]) =>
+    `<label><input type="checkbox" value="${k}"><span>${l}</span></label>`).join('');
+  ['r-msg', 'c-msg', 'ph-msg'].forEach(id => { $(id).textContent = ''; $(id).className = 'msg'; });
+  renderPanel();
+  panel.hidden = false;
+  try { history.replaceState(null, '', '#' + tid); } catch {}
+  if (t.lat && t.lon) map.panTo([t.lat, t.lon]);
+}
+function closePanel() {
+  panel.hidden = true; C.current = null;
+  try { history.replaceState(null, '', location.pathname + location.search); } catch {}
+}
+
+function renderPanel() {
+  const tid = C.current; if (!tid) return;
+  const r = latest(tid);
+  const st = $('p-status');
+  st.innerHTML = '';
+  if (r) {
+    st.innerHTML = `<span class="dot" style="background:${CONDITIONS[r.condition].hex}"></span><div><b></b><small></small></div>`;
+    st.querySelector('b').textContent = CONDITIONS[r.condition].label;
+    st.querySelector('small').textContent = `Ilmoitettu ${rel(r.created_at)}`;
+  } else {
+    st.innerHTML = '<div><b>Ei tuoreita ilmoituksia</b><small></small></div>';
+    st.querySelector('small').textContent = C.targets[tid].kind === 'route'
+      ? (freshHours(C.targets[tid]) === 48 ? 'Latuilmoitukset ovat voimassa 48 h.' : 'Reitti-ilmoitukset ovat voimassa 7 pv.')
+      : 'Kerro ensimmäisenä, millainen paikka on nyt.';
+  }
+
+  const reps = C.reports.filter(x => x.target_id === tid).slice(0, 20);
+  const ul = $('p-reports'); ul.innerHTML = '';
+  if (!reps.length) ul.innerHTML = '<li class="empty" style="border:0;padding:0">Ei ilmoituksia viimeisen 60 päivän ajalta.</li>';
+  reps.forEach(x => {
+    const li = document.createElement('li');
+    if (x.condition) li.style.borderLeftColor = CONDITIONS[x.condition].hex;
+    li.innerHTML = '<div class="when"></div><div class="tags"></div><p></p>';
+    li.querySelector('.when').textContent = (x.condition ? CONDITIONS[x.condition].label + ' · ' : '') + rel(x.created_at);
+    li.querySelector('.tags').textContent = (x.tags || []).map(k => TAG_LABEL[k] || k).join(', ');
+    li.querySelector('p').textContent = x.note || '';
+    ul.appendChild(li);
+  });
+
+  const cms = C.comments.filter(x => x.target_id === tid).slice(0, 50);
+  const cl = $('p-comments'); cl.innerHTML = '';
+  if (!cms.length) cl.innerHTML = '<li class="empty" style="border:0;padding:0">Ei vielä kommentteja.</li>';
+  cms.forEach(x => {
+    const li = document.createElement('li');
+    li.innerHTML = '<div class="when"></div><p></p>';
+    li.querySelector('.when').textContent = `${x.author_name || 'Nimetön'} · ${rel(x.created_at)}`;
+    li.querySelector('p').textContent = x.body;
+    cl.appendChild(li);
+  });
+
+  const phs = C.photos.filter(x => x.target_id === tid && C.signed[x.storage_path]);
+  const g = $('p-photos'); g.innerHTML = '';
+  if (!phs.length) g.innerHTML = '<p class="empty">Ei vielä kuvia.</p>';
+  phs.forEach(x => {
+    const fig = document.createElement('figure');
+    const a = document.createElement('a'); a.href = C.signed[x.storage_path]; a.target = '_blank'; a.rel = 'noopener';
+    const img = document.createElement('img'); img.loading = 'lazy'; img.src = C.signed[x.storage_path];
+    img.alt = x.caption || 'Kävijän kuva';
+    a.appendChild(img); fig.appendChild(a);
+    const cap = document.createElement('figcaption');
+    cap.textContent = [x.caption, x.author_name, rel(x.created_at)].filter(Boolean).join(' · ');
+    fig.appendChild(cap); g.appendChild(fig);
+  });
+}
+
+function setMsg(id, text, err = false) { const m = $(id); m.textContent = text; m.className = 'msg' + (err ? ' err' : ''); }
+async function withBusy(form, fn) {
+  const b = form.querySelector('.submit'); b.disabled = true;
+  try { await fn(); } finally { b.disabled = false; }
+}
+function remember(name) { try { if (name) localStorage.setItem('nick', name); } catch {} }
+try { const n = localStorage.getItem('nick'); if (n) { $('c-name').value = n; $('ph-name').value = n; } } catch {}
+
+$('f-report').addEventListener('submit', e => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  if ($('r-hp').value) return;  // botti täytti piilokentän
+  const cond = form.querySelector('input[name=cond]:checked')?.value || null;
+  const tags = [...$('r-tags').querySelectorAll('input:checked')].map(i => i.value);
+  const note = $('r-note').value.trim() || null;
+  if (!cond && !tags.length && !note) { setMsg('r-msg', 'Valitse kunto tai tarkenne, tai kirjoita lisätieto.', true); return; }
+  withBusy(form, async () => {
+    try {
+      await api('/rest/v1/reports', { method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: { target_id: C.current, condition: cond, tags, note } });
+      form.reset(); setMsg('r-msg', 'Kiitos! Ilmoitus on julkaistu.');
+      await refresh();
+    } catch (err) { setMsg('r-msg', err.message, true); }
+  });
+});
+
+$('f-comment').addEventListener('submit', e => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  if ($('c-hp').value) return;
+  const name = $('c-name').value.trim() || null, body = $('c-body').value.trim();
+  if (!body) { setMsg('c-msg', 'Kirjoita kommentti ennen lähetystä.', true); return; }
+  withBusy(form, async () => {
+    try {
+      await api('/rest/v1/comments', { method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: { target_id: C.current, author_name: name, body } });
+      remember(name); $('c-body').value = ''; setMsg('c-msg', 'Kiitos! Kommentti on julkaistu.');
+      await refresh();
+    } catch (err) { setMsg('c-msg', err.message, true); }
+  });
+});
+
+// Kuva pienennetään (pisin sivu 1600 px) ja tallennetaan uudelleen JPEG:ksi, jolloin EXIF-sijainti katoaa.
+async function prepareImage(file) {
+  let bmp;
+  try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+  catch { throw new Error('Kuvaa ei voitu lukea. Käytä JPEG-, PNG- tai WebP-kuvaa.'); }
+  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+  c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+  if (!blob) throw new Error('Kuvan käsittely epäonnistui.');
+  if (blob.size > 5 * 1024 * 1024) throw new Error('Kuva on liian suuri (yli 5 Mt).');
+  return blob;
+}
+$('f-photo').addEventListener('submit', e => {
+  e.preventDefault();
+  const form = e.currentTarget;
+  if ($('ph-hp').value) return;
+  const file = $('ph-file').files[0];
+  if (!file) { setMsg('ph-msg', 'Valitse kuva.', true); return; }
+  const caption = $('ph-caption').value.trim() || null, name = $('ph-name').value.trim() || null;
+  withBusy(form, async () => {
+    try {
+      setMsg('ph-msg', 'Käsitellään kuvaa…');
+      const blob = await prepareImage(file);
+      const path = `pending/${crypto.randomUUID()}.jpg`;
+      setMsg('ph-msg', 'Lähetetään…');
+      await api('/storage/v1/object/photos/' + path, { method: 'POST', raw: true, body: blob,
+        headers: { 'Content-Type': 'image/jpeg' } });
+      await api('/rest/v1/photos', { method: 'POST', headers: { Prefer: 'return=minimal' },
+        body: { target_id: C.current, storage_path: path, caption, author_name: name } });
+      remember(name); $('ph-file').value = ''; $('ph-caption').value = '';
+      setMsg('ph-msg', 'Kiitos! Kuva näkyy, kun ylläpito on hyväksynyt sen.');
+    } catch (err) { setMsg('ph-msg', err.message, true); }
+  });
+});
+
+async function refresh() {
+  try { await loadCommunity(); renderPanel(); } catch {}
+}
+
+// Kohdelinkki (esim. QR-koodi laavun seinässä): index.html#jakalamaen-kota
+function openFromHash() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (!h || !C.targets[h] || h === C.current) return;
+  const t = C.targets[h];
+  if (t.lat && t.lon) map.setView([t.lat, t.lon], 16);
+  openPanel(h);
+}
+window.addEventListener('hashchange', openFromHash);
+
+loadCommunity().then(openFromHash).catch(() => {
+  // Kartta toimii ilman yhteisöpalvelua; kortin painike kertoo tilanteen.
+  C.ready = false;
+});
 </script>
 </body>
 </html>
